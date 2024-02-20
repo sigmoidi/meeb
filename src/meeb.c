@@ -18,8 +18,8 @@ enum CompressionOpt { COMPRESSION_NONE, COMPRESSION_UPX, COMPRESSION_KKRUNCHY };
 
 #define MSVC_COMPILE_FAST "/O2 /Ot"
 #define MSVC_COMPILE_SMALL "/O1 /Os"
-#define MSVC_LINK_FAST "/ALIGN:16 /FILEALIGN:16"
-#define MSVC_LINK_SMALL ""
+#define MSVC_LINK_FAST ""
+#define MSVC_LINK_SMALL "/ALIGN:16 /FILEALIGN:16"
 
 #define GCC_COMPILE_FLAGS "-std=c17 -nostdlib -nostartfiles -o ./build.meeb/compiled.obj -c"
 
