@@ -13,20 +13,20 @@ enum CompilerOpt { COMPILER_MSVC, COMPILER_GCC };
 enum LinkerOpt { LINKER_MSVC, LINKER_CRINKLER };
 enum CompressionOpt { COMPRESSION_NONE, COMPRESSION_UPX, COMPRESSION_KKRUNCHY };
 
-#define MSVC_COMPILE_FLAGS "/nologo /Fo:.\\build.meeb\\compiled.obj /GS- /c"
-#define MSVC_LINK_FLAGS "/nologo /SUBSYSTEM:CONSOLE /NODEFAULTLIB /ENTRY:entry /OUT:.\\build.meeb\\linked.exe kernel32.lib ntdll.lib shell32.lib shlwapi.lib user32.lib"
+#define MSVC_COMPILE_FLAGS "/nologo /GS- /c"
+#define MSVC_LINK_FLAGS "/nologo /SUBSYSTEM:CONSOLE /NODEFAULTLIB /ENTRY:entry kernel32.lib ntdll.lib shell32.lib shlwapi.lib user32.lib"
 
 #define MSVC_COMPILE_FAST "/O2 /Ot"
 #define MSVC_COMPILE_SMALL "/O1 /Os"
 #define MSVC_LINK_FAST ""
 #define MSVC_LINK_SMALL "/ALIGN:16 /FILEALIGN:16"
 
-#define GCC_COMPILE_FLAGS "-std=c17 -nostdlib -nostartfiles -o ./build.meeb/compiled.obj -c"
+#define GCC_COMPILE_FLAGS "-std=c17 -nostdlib -nostartfiles -c"
 
 #define GCC_COMPILE_FAST "-O3"
 #define GCC_COMPILE_SMALL "-Os"
 
-#define CRINKLER_LINK_FLAGS "/CRINKLER /SUBSYSTEM:CONSOLE /NODEFAULTLIB /ENTRY:entry /OUT:.\\build.meeb\\linked.exe kernel32.lib ntdll.lib shell32.lib shlwapi.lib user32.lib"
+#define CRINKLER_LINK_FLAGS "/CRINKLER /SUBSYSTEM:CONSOLE /NODEFAULTLIB /ENTRY:entry kernel32.lib ntdll.lib shell32.lib shlwapi.lib user32.lib"
 
 int main() {
 	int err = 0;
@@ -187,17 +187,16 @@ int main() {
 	__start("Compiling...");
 	if (options.compiler == COMPILER_MSVC) {
 		__debug("Using cl.exe from MSVC");
-		if (!run("cl.exe %s %s %s", MSVC_COMPILE_FLAGS, options.tiny? MSVC_COMPILE_SMALL : MSVC_COMPILE_FAST, options.source)) {
+		if (!run("cl.exe %s %s %s /Fo:.\\build.meeb\\compiled.obj",
+			MSVC_COMPILE_FLAGS, options.tiny? MSVC_COMPILE_SMALL : MSVC_COMPILE_FAST, options.source)) {
 			__error("Compilation failed!");
 			err = 1;
 			goto cleanup;
 		}
 	} else if (options.compiler == COMPILER_GCC) {
 		__debug("Using gcc on WSL");
-		bool ok = options.x64?
-			run("wsl.exe x86_64-w64-mingw32-gcc-win32 %s %s %s", GCC_COMPILE_FLAGS, options.tiny? GCC_COMPILE_SMALL : GCC_COMPILE_FAST, options.source) :
-			run("wsl.exe i686-w64-mingw32-gcc-win32 -m32 %s %s %s", GCC_COMPILE_FLAGS, options.tiny? GCC_COMPILE_SMALL : GCC_COMPILE_FAST, options.source);
-		if (!ok) {
+		if (!run("wsl.exe %s-w64-mingw32-gcc-win32 %s %s %s %s -o ./build.meeb/compiled.obj",
+			options.x64? "x86_64" : "i686", options.x64? "" : "-m32", GCC_COMPILE_FLAGS, options.tiny? GCC_COMPILE_SMALL : GCC_COMPILE_FAST, options.source)) {
 			__error("Compilation failed!");
 			err = 1;
 			goto cleanup;
@@ -211,17 +210,16 @@ int main() {
 	__start("Linking...");
 	if (options.linker == LINKER_MSVC) {
 		__debug("Using link.exe from MSVC");
-		if (!run("link.exe %s %s %s", MSVC_LINK_FLAGS, options.tiny? MSVC_LINK_SMALL : MSVC_LINK_FAST, ".\\build.meeb\\compiled.obj")) {
+		if (!run("link.exe %s %s .\\build.meeb\\compiled.obj /OUT:.\\build.meeb\\linked.exe",
+			MSVC_LINK_FLAGS, options.tiny? MSVC_LINK_SMALL : MSVC_LINK_FAST)) {
 			__error("Linking failed!");
 			err = 1;
 			goto cleanup;
 		}
 	} else if (options.linker == LINKER_CRINKLER) {
 		__debug("Using Crinkler");
-		bool ok = options.x64?
-			run(".\\tools\\crinkler64.exe %s %s", CRINKLER_LINK_FLAGS, ".\\build.meeb\\compiled.obj") :
-			run(".\\tools\\crinkler32.exe %s %s", CRINKLER_LINK_FLAGS, ".\\build.meeb\\compiled.obj");
-		if (!ok) {
+		if (!run(".\\tools\\crinkler%d.exe %s .\\build.meeb\\compiled.obj /OUT:.\\build.meeb\\linked.exe",
+			options.x64? 64 : 32, CRINKLER_LINK_FLAGS)) {
 			__error("Linking failed!");
 			err = 1;
 			goto cleanup;
