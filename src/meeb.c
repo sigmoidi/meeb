@@ -56,7 +56,7 @@ int main() {
 		bool strip;
 		bool x64;
 		bool small;
-	} options = {0, "program.exe", false, COMPILER_MSVC, LINKER_MSVC, COMPRESSION_NONE, true, true, false};
+	} options = {0, "out.exe", false, COMPILER_MSVC, LINKER_MSVC, COMPRESSION_NONE, true, true, false};
 
 	for (int i = 1; i < argc; i++) {
 		if (!options.source && (__strlen(argv[i]) > 2 || argv[i][0] != '-')) {

@@ -17,7 +17,14 @@ The program itself has no dependencies, but for compression, MEEB knows how to u
 * [kkrunchy](https://www.farbrausch.de/~fg/kkrunchy/)
 * [UPX](https://upx.github.io/)
 
-Since I don't own any of these, you have to install them yourself. Once you have acquired the executables, place them in `tools/[name][bitness].exe` - that is, for 32-bit Crinkler, the file would be `tools/crinkler32.exe`. If there is no separate version for 32-bit/64-bit, leave the bitness out of the name.
+Since I don't own any of these, you have to install them yourself. Once you have acquired the executables, place them in `tools/[normalized_name].exe` - that is, for e.g. Crinkler, the file would be `tools/crinkler.exe`.
+
+For MSVC and GCC, you need to install either (or both of):
+
+* **Visual Studio Tools**, or equivalent, which contains `cl.exe` and `link.exe`
+* **Linux Subsystem for Windows** and the `gcc-mingw-w64-x86-64-win32` package, which contains `x86_64-w64-mingw32-gcc-win32`
+
+Note that for MSVC, you have to set the build environment up with your method of choice. Effectively this means adding the compiler and linker to path and telling them where the Windows toolkit/libraries are. I find it easiest to find and run `vcvars32.bat` or `vcvars64.bat`, depending on which bitness you want.
 
 ## Installation
 
@@ -30,6 +37,7 @@ Simply download the MEEB executable, as well as any desired tools (see above).
 Usage instructions can be viewed with `meeb` or `meeb -h`:
 
 ```
+C:\> meeb
  ____    ____  ________  ________  _______
 |_   \  /   _||_   __  ||_   __  ||_   _  \
   |   \/   |    | |_ \_|  | |_ \_|  | |_) /
