@@ -231,11 +231,11 @@ void print_help() {
 	         "  |   \\/   |    | |_ \\_|  | |_ \\_|  | |_) /\n"
 	         "  | |\\  /| |    |  _| _   |  _| _   |  __ \\\n"
 	         " _| |_\\/_| |_  _| |__/ | _| |__/ | _| |__) |\n"
-	         "|_____||_____||________||________||_______/\n"
+	         "|_____||_____||________||________||_______/\n\n"
 	         CRESET);
 
-	__printf("\n==== The " CYAN "M" CRESET "inimal " CYAN "E" CRESET "x" CYAN "e" CRESET "cutable " CYAN "B" CRESET "uild Tool ====\n"
-		     "            Written by Henri A.\n\n");
+	__printf("==== The " CYAN "M" CRESET "inimal " CYAN "E" CRESET "x" CYAN "e" CRESET "cutable " CYAN "B" CRESET "uild Tool ====\n"
+		     "  \\_ Written By Henri A.   " GREY "Version " VERSION CRESET " _/\n\n");
 
 	print_options();
 

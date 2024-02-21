@@ -38,9 +38,9 @@ Usage instructions can be viewed with `meeb` or `meeb -h`:
 |_____||_____||________||________||_______/
 
 ==== The Minimal Executable Build Tool ====
-            Written by Henri A.
+  \_ Written By Henri A.   Version 1.0 _/
 
-Usage: meeb src.c [options]
+Usage: meeb source [options]
 Options:
    -o   Output file
    -o!  Output file, force overwrite
@@ -51,8 +51,8 @@ Options:
         Defaults to 'msvc'
    -x   Further compression, either 'upx' or 'kkrunchy'
         Defaults to none
-   -f   Optimization target, either 'speed' or 'size'
-        Defaults to 'speed'
+   -f   Optimization goal, either 'fast' or 'small'
+        Defaults to 'fast'
    -b   Executable bitness, either 32 or 64
         Defaults to 64
    -d   Don't strip or remove debugging information

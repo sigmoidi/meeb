@@ -7,6 +7,7 @@
 typedef uint_fast8_t bool;
 
 #define DEBUG false
+#define VERSION "1.0"
 
 #include "utils.h"
 
