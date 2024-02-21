@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <inttypes.h>
+#undef small // sigh... https://stackoverflow.com/a/27794577
 
 #define true 1
 #define false 0
@@ -12,6 +13,8 @@ typedef uint_fast8_t bool;
 enum CompilerOpt { COMPILER_MSVC, COMPILER_GCC };
 enum LinkerOpt { LINKER_MSVC, LINKER_CRINKLER };
 enum CompressionOpt { COMPRESSION_NONE, COMPRESSION_UPX, COMPRESSION_KKRUNCHY };
+
+#define BUILD_DIR "build.meeb"
 
 #define MSVC_COMPILE_FLAGS "/nologo /GS- /c"
 #define MSVC_LINK_FLAGS "/nologo /SUBSYSTEM:CONSOLE /NODEFAULTLIB /ENTRY:entry kernel32.lib ntdll.lib shell32.lib shlwapi.lib user32.lib"
@@ -26,7 +29,7 @@ enum CompressionOpt { COMPRESSION_NONE, COMPRESSION_UPX, COMPRESSION_KKRUNCHY };
 #define GCC_COMPILE_FAST "-O3"
 #define GCC_COMPILE_SMALL "-Os"
 
-#define CRINKLER_LINK_FLAGS "/CRINKLER /SUBSYSTEM:CONSOLE /NODEFAULTLIB /ENTRY:entry kernel32.lib ntdll.lib shell32.lib shlwapi.lib user32.lib"
+#define CRINKLER_LINK_FLAGS "/CRINKLER /COMPMODE:VERYSLOW /SUBSYSTEM:CONSOLE /NODEFAULTLIB /ENTRY:entry kernel32.lib ntdll.lib shell32.lib shlwapi.lib user32.lib"
 
 int main() {
 	int err = 0;
@@ -37,7 +40,10 @@ int main() {
 	load_libraries();
 	get_arguments(&argc, &argv);
 
-	if (argc < 2) goto help;
+	if (argc < 2) {
+		print_help();
+		exit(1);
+	}
 
 	struct {
 		char* source;
@@ -48,21 +54,23 @@ int main() {
 		enum CompressionOpt compression;
 		bool strip;
 		bool x64;
-		bool tiny;
+		bool small;
 	} options = {0, "program.exe", false, COMPILER_MSVC, LINKER_MSVC, COMPRESSION_NONE, true, true, false};
 
 	for (int i = 1; i < argc; i++) {
 		if (!options.source && (__strlen(argv[i]) > 2 || argv[i][0] != '-')) {
 			options.source = argv[i];
 		} else if (__strcmp(argv[i], "-h")) {
-			goto help;
+			print_help();
+			exit(1);
 		} else if (__strcmp(argv[i], "-o")) {
 			i++;
 			if (i < argc) {
 				options.output = argv[i];
 			} else {
 				__error("You must specify a valid output file (" CYAN "-o" CRESET")");
-				goto help;
+				print_options();
+				exit(1);
 			}
 		} else if (__strcmp(argv[i], "-o!")) {
 			i++;
@@ -71,7 +79,8 @@ int main() {
 				options.force = true;
 			} else {
 				__error("You must specify a valid output file (" CYAN "-o!" CRESET")");
-				goto help;
+				print_options();
+				exit(1);
 			}
 		} else if (__strcmp(argv[i], "-c")) {
 			i++;
@@ -81,8 +90,8 @@ int main() {
 				options.compiler = COMPILER_GCC;
 			} else {
 				__error("You must specify a valid compiler (" CYAN "-c" CRESET").");
-				__error("Allowed options are 'msvc' and 'gcc'.");
-				goto help;
+				print_options();
+				exit(1);
 			}
 		} else if (__strcmp(argv[i], "-l")) {
 			i++;
@@ -92,8 +101,8 @@ int main() {
 				options.linker = LINKER_CRINKLER;
 			} else {
 				__error("You must specify a valid linker (" CYAN "-l" CRESET").");
-				__error("Allowed options are 'msvc' and 'crinkler'.");
-				goto help;
+				print_options();
+				exit(1);
 			}
 		} else if (__strcmp(argv[i], "-x")) {
 			i++;
@@ -103,17 +112,17 @@ int main() {
 				options.compression = COMPRESSION_KKRUNCHY;
 			} else {
 				__error("You must specify a valid compressor (" CYAN "-x" CRESET").");
-				__error("Allowed options are 'upx' and 'kkrunchy'.");
-				goto help;
+				print_options();
+				exit(1);
 			}
 		} else if (__strcmp(argv[i], "-f")) {
 			i++;
-			if (i < argc && __strcmp(argv[i], "size")) {
-				options.tiny = true;
-			} else if (i >= argc || !__strcmp(argv[i], "speed")) {
-				__error("You must specify a valid optimization target (" CYAN "-f" CRESET").");
-				__error("Allowed options are 'speed' and 'size'.");
-				goto help;
+			if (i < argc && __strcmp(argv[i], "small")) {
+				options.small = true;
+			} else if (i >= argc || !__strcmp(argv[i], "fast")) {
+				__error("You must specify a valid optimization goal (" CYAN "-f" CRESET").");
+				print_options();
+				exit(1);
 			}
 		} else if (__strcmp(argv[i], "-b")) {
 			i++;
@@ -121,30 +130,34 @@ int main() {
 				options.x64 = false;
 			} else if (i >= argc || !__strcmp(argv[i], "64")) {
 				__error("You must specify a valid bitness (" CYAN "-b" CRESET").");
-				__error("Allowed options are 32 and 64.");
-				goto help;
+				print_options();
+				exit(1);
 			}
 		} else if (__strcmp(argv[i], "-d")) {
 			options.strip = false;
 		} else {
 			__error("What do you mean with '%s'?", argv[i]);
-			goto help;
+			print_options();
+			exit(1);
 		}
 	}
 
 	if (!options.source) {
 		__error("You must specify a source file!");
-		goto help;
+		print_options();
+		exit(1);
 	}
 	if (!file_exists(options.source)) {
 		__error("The given source file does not exist!");
-		goto help;
+		print_options();
+		exit(1);
 	}
 
 	if (file_exists(options.output) && !options.force) {
 		__error("The output file already exists!");
 		__error("Either change the name or force overwrite with " CYAN "-o!" CRESET);
-		goto help;
+		print_options();
+		exit(1);
 	}
 
 	__debug("Running with the following options:");
@@ -177,77 +190,87 @@ int main() {
 			__info(GREY "Compression: " CYAN "kkrunchy" CRESET);
 			break;
 	}
-	__info(GREY "Focusing on: " CYAN "%s" CRESET, options.tiny? "size" : "speed");
+	__info(GREY "Focusing on: " CYAN "%s" CRESET, options.small? "size" : "speed");
 	__info(GREY "  Stripping: " CYAN "%s" CRESET, options.strip? "yes": "no");
 	__info(GREY "    Bitness: " CYAN "%d" CRESET, options.x64? 64 : 32);
 
 	__debug("Creating build folder...");
-	create_directory(".\\build.meeb");
+	create_directory(".\\" BUILD_DIR);
 
 	__start("Compiling...");
 	if (options.compiler == COMPILER_MSVC) {
 		__debug("Using cl.exe from MSVC");
-		if (!run("cl.exe %s %s %s /Fo:.\\build.meeb\\compiled.obj",
-			MSVC_COMPILE_FLAGS, options.tiny? MSVC_COMPILE_SMALL : MSVC_COMPILE_FAST, options.source)) {
+		if (!run("cl.exe " MSVC_COMPILE_FLAGS " %s %s /Fo:.\\" BUILD_DIR "\\compiled.obj",
+			options.small? MSVC_COMPILE_SMALL : MSVC_COMPILE_FAST, options.source)) {
 			__error("Compilation failed!");
 			err = 1;
 			goto cleanup;
 		}
 	} else if (options.compiler == COMPILER_GCC) {
 		__debug("Using gcc on WSL");
-		if (!run("wsl.exe %s-w64-mingw32-gcc-win32 %s %s %s %s -o ./build.meeb/compiled.obj",
-			options.x64? "x86_64" : "i686", options.x64? "" : "-m32", GCC_COMPILE_FLAGS, options.tiny? GCC_COMPILE_SMALL : GCC_COMPILE_FAST, options.source)) {
+		if (!run("wsl.exe x86_64-w64-mingw32-gcc-win32 " GCC_COMPILE_FLAGS " %s %s %s -o ./" BUILD_DIR "/compiled.obj",
+			options.x64? "" : "-m32", options.small? GCC_COMPILE_SMALL : GCC_COMPILE_FAST, options.source)) {
 			__error("Compilation failed!");
 			err = 1;
 			goto cleanup;
 		}
-	} else {
-		__error("Unknown compiler option (%d)", options.compiler);
-		err = 1;
-		goto cleanup;
 	}
 	__ok("Compilation finished!");
 	__start("Linking...");
 	if (options.linker == LINKER_MSVC) {
 		__debug("Using link.exe from MSVC");
-		if (!run("link.exe %s %s .\\build.meeb\\compiled.obj /OUT:.\\build.meeb\\linked.exe",
-			MSVC_LINK_FLAGS, options.tiny? MSVC_LINK_SMALL : MSVC_LINK_FAST)) {
+		if (!run("link.exe " MSVC_LINK_FLAGS " %s .\\" BUILD_DIR "\\compiled.obj /OUT:.\\" BUILD_DIR "\\linked.exe",
+			options.small? MSVC_LINK_SMALL : MSVC_LINK_FAST)) {
 			__error("Linking failed!");
 			err = 1;
 			goto cleanup;
 		}
 	} else if (options.linker == LINKER_CRINKLER) {
 		__debug("Using Crinkler");
-		if (!run(".\\tools\\crinkler%d.exe %s .\\build.meeb\\compiled.obj /OUT:.\\build.meeb\\linked.exe",
-			options.x64? 64 : 32, CRINKLER_LINK_FLAGS)) {
+		if (!run(".\\tools\\crinkler.exe " CRINKLER_LINK_FLAGS " .\\" BUILD_DIR "\\compiled.obj /OUT:.\\" BUILD_DIR "\\linked.exe")) {
 			__error("Linking failed!");
 			err = 1;
 			goto cleanup;
 		}
-	} else {
-		__error("Unknown linker option (%d)", options.compiler);
-		err = 1;
-		goto cleanup;
 	}
 	__ok("Linking finished!");
 	if (options.compression != COMPRESSION_NONE) {
 		__start("Compressing...");
-		__error("Not implemented!");
-		__ok("Compression finished!");
-	}
 
-	__debug("Copying program...");
-	CopyFileA(".\\build.meeb\\linked.exe", options.output, FALSE);
+		if (options.compression == COMPRESSION_UPX) {
+			__debug("Using UPX");
+			if (!run(".\\tools\\upx.exe -9 .\\" BUILD_DIR "\\linked.exe -o .\\" BUILD_DIR "\\compressed.exe")) {
+				__error("Compression failed!");
+				err = 1;
+				goto cleanup;
+			}
+		} else if (options.compression == COMPRESSION_KKRUNCHY) {
+			__debug("Using Kkrunchy");
+			if (!run(".\\tools\\kkrunchy.exe --best .\\" BUILD_DIR "\\linked.exe --out .\\" BUILD_DIR "\\compressed.exe")) {
+				__error("Compression failed!");
+				err = 1;
+				goto cleanup;
+			}
+		}
+
+		__debug("Copying program...");
+		if (!CopyFileA(".\\" BUILD_DIR "\\compressed.exe", options.output, FALSE)) {
+			__error("Could not copy compressed program!");
+			__error("Check the output from the tools above.");
+			goto cleanup;
+		}
+
+		__ok("Compression finished!");
+	} else {
+		__debug("Copying program...");
+		CopyFileA(".\\" BUILD_DIR "\\linked.exe", options.output, FALSE);
+	}
 
 cleanup:
 	__debug("Removing build folder...");
-	remove_directory(".\\build.meeb");
+	remove_directory(".\\" BUILD_DIR);
 	__info("Build finished.");
 
 	free_arguments(argv);
 	exit(err);
-
-help:
-	print_help();
-	exit(1);
 }

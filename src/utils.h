@@ -18,7 +18,7 @@ typedef int (*_ntdll_vsnprintf_t)(char*, size_t, const char*, va_list);
 #define __vsnprintf(buf, n, fmt, args) \
 	__dllcall_casted(ntdll, "_vsnprintf", _ntdll_vsnprintf_t, buf, n, fmt, args)
 
-#define __error(fmt, ...) __printf(GREY "[" RED " FAIL " GREY "] " CRESET fmt "\r\n", __VA_ARGS__)
+#define __error(fmt, ...) __printf(GREY "[" RED " OOPS " GREY "] " CRESET fmt "\r\n", __VA_ARGS__)
 #if DEBUG == 1
 #define __debug(fmt, ...) __printf(GREY "[ DBUG ] " fmt CRESET "\r\n", __VA_ARGS__)
 #else
@@ -183,6 +183,8 @@ bool run(char* fmt, ...) {
 		total_read += chunk_read_size;
 	}
 
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
 	int exit_code;
 	GetExitCodeProcess(pi.hProcess, &exit_code);
 	__debug("Process exited with code %d", exit_code);
@@ -202,6 +204,26 @@ cleanup:
 	return success;
 }
 
+void print_options() {
+	__printf(GREY "Usage:" CRESET " meeb " CYAN "source " GREEN "[options]" CRESET "\n"
+	         GREY "Options:\n" CRESET
+	         GREEN "   -o" CRESET "\tOutput file\n"
+	         GREEN "   -o!" CRESET "\tOutput file, force overwrite\n"
+	         GREY "\tDefaults to 'out.exe', no force\n" CRESET
+	         GREEN "   -c" CRESET "\tCompiler, either 'msvc' or 'gcc'\n"
+	         GREY "\tDefaults to 'msvc'\n" CRESET
+	         GREEN "   -l" CRESET "\tLinker, either 'msvc' or 'crinkler'\n"
+	         GREY "\tDefaults to 'msvc'\n" CRESET
+	         GREEN "   -x" CRESET "\tFurther compression, either 'upx' or 'kkrunchy'\n"
+	         GREY "\tDefaults to none\n" CRESET
+	         GREEN "   -f" CRESET "\tOptimization goal, either 'fast' or 'small'\n"
+	         GREY "\tDefaults to 'fast'\n" CRESET
+	         GREEN "   -b" CRESET "\tExecutable bitness, either 32 or 64\n"
+	         GREY "\tDefaults to 64\n" CRESET
+	         GREEN "   -d" CRESET "\tDon't strip or remove debugging information\n"
+	         GREY "\tDefaults to stripped (no flag)\n" CRESET);
+}
+
 void print_help() {
 	__printf(CYAN
 		     " ____    ____  ________  ________  _______\n"
@@ -215,23 +237,8 @@ void print_help() {
 	__printf("\n==== The " CYAN "M" CRESET "inimal " CYAN "E" CRESET "x" CYAN "e" CRESET "cutable " CYAN "B" CRESET "uild Tool ====\n"
 		     "            Written by Henri A.\n\n");
 
-	__printf(GREY "Usage:" CRESET " meeb " CYAN "src.c " GREEN "[options]" CRESET "\n"
-	         GREY "Options:\n" CRESET
-	         GREEN "   -o" CRESET "\tOutput file\n"
-	         GREEN "   -o!" CRESET "\tOutput file, force overwrite\n"
-	         GREY "\tDefaults to 'out.exe', no force\n" CRESET
-	         GREEN "   -c" CRESET "\tCompiler, either 'msvc' or 'gcc'\n"
-	         GREY "\tDefaults to 'msvc'\n" CRESET
-	         GREEN "   -l" CRESET "\tLinker, either 'msvc' or 'crinkler'\n"
-	         GREY "\tDefaults to 'msvc'\n" CRESET
-	         GREEN "   -x" CRESET "\tFurther compression, either 'upx' or 'kkrunchy'\n"
-	         GREY "\tDefaults to none\n" CRESET
-	         GREEN "   -f" CRESET "\tOptimization target, either 'speed' or 'size'\n"
-	         GREY "\tDefaults to 'speed'\n" CRESET
-	         GREEN "   -b" CRESET "\tExecutable bitness, either 32 or 64\n"
-	         GREY "\tDefaults to 64\n" CRESET
-	         GREEN "   -d" CRESET "\tDon't strip or remove debugging information\n"
-	         GREY "\tDefaults to stripped (no flag)\n" CRESET
-	         RED "\nNote:" CRESET " You must install any desired tools beforehand.\n"
+	print_options();
+
+	__printf(RED "\nNote:" CRESET " You must install any desired tools beforehand.\n"
 	                         "      Please see the README for more information.\n");
 }
